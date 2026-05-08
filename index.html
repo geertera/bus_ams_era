@@ -291,24 +291,83 @@
     function parseDepartureTime(value) {
       if (!value) return null;
 
-      // OVapi usually returns ISO-like timestamps. This also handles plain HH:mm:ss as fallback.
-      if (value.indexOf('T') > -1 || value.indexOf('-') > -1) {
-        return new Date(value);
+      var date = null;
+      var text = String(value);
+
+      // Handles ISO-like timestamps.
+      if (text.indexOf('T') > -1 || text.indexOf('-') > -1) {
+        date = new Date(text);
+      } else if (text.indexOf(':') > -1) {
+        // Handles HH:mm or HH:mm:ss.
+        var parts = text.split(':');
+        date = new Date();
+        date.setHours(parseInt(parts[0], 10), parseInt(parts[1], 10), 0, 0);
+
+        // If the time already passed today, assume it is after midnight.
+        if (date.getTime() < new Date().getTime() - 120000) {
+          date.setDate(date.getDate() + 1);
+        }
       }
 
-      var parts = value.split(':');
-      var date = new Date();
-      date.setHours(parseInt(parts[0], 10), parseInt(parts[1], 10), 0, 0);
+      if (!date || isNaN(date.getTime())) return null;
       return date;
     }
 
     function getBestDepartureTime(trip) {
-      return parseDepartureTime(
-        trip.ExpectedDepartureTime ||
-        trip.TargetDepartureTime ||
-        trip.ExpectedArrivalTime ||
-        trip.TargetArrivalTime
+      var preferredFields = [
+        'ExpectedDepartureTime',
+        'TargetDepartureTime',
+        'ExpectedArrivalTime',
+        'TargetArrivalTime',
+        'DepartureTime',
+        'ArrivalTime',
+        'PassingTime'
+      ];
+
+      for (var i = 0; i < preferredFields.length; i++) {
+        if (trip[preferredFields[i]]) {
+          var parsed = parseDepartureTime(trip[preferredFields[i]]);
+          if (parsed) return parsed;
+        }
+      }
+
+      // Fallback: OVapi variants sometimes use slightly different time keys.
+      for (var key in trip) {
+        if (trip.hasOwnProperty(key) && /time/i.test(key) && typeof trip[key] === 'string') {
+          var fallback = parseDepartureTime(trip[key]);
+          if (fallback) return fallback;
+        }
+      }
+
+      return null;
+    }
+
+    function looksLikeTrip(object) {
+      if (!object || typeof object !== 'object') return false;
+      return !!(
+        object.LinePublicNumber ||
+        object.LinePlanningNumber ||
+        object.DestinationName50 ||
+        object.DestinationName ||
+        object.ExpectedDepartureTime ||
+        object.TargetDepartureTime ||
+        object.ExpectedArrivalTime ||
+        object.TargetArrivalTime
       );
+    }
+
+    function collectTrips(source, output) {
+      if (!source || typeof source !== 'object') return;
+
+      if (looksLikeTrip(source)) {
+        output.push(source);
+      }
+
+      for (var key in source) {
+        if (source.hasOwnProperty(key) && typeof source[key] === 'object') {
+          collectTrips(source[key], output);
+        }
+      }
     }
 
     function clean(value, fallback) {
@@ -319,31 +378,30 @@
       var container = document.getElementById('departures');
       var stopLabel = document.getElementById('stop-name');
       var stopData = data[TPC_CODE] || data;
-      var passes = stopData.Passes || {};
       var departures = [];
-      var key;
+      var trips = [];
 
       if (stopData.Stop && stopData.Stop.TimingPointName) {
         stopLabel.textContent = stopData.Stop.TimingPointName;
       }
 
-      for (key in passes) {
-        if (passes.hasOwnProperty(key)) {
-          var trip = passes[key];
-          var departureTime = getBestDepartureTime(trip);
+      collectTrips(stopData.Passes || stopData, trips);
 
-          if (departureTime && departureTime.getTime() > new Date().getTime() - 120000) {
-            departures.push({
-              time: departureTime,
-              line: clean(trip.LinePublicNumber, trip.LinePlanningNumber),
-              destination: clean(trip.DestinationName50, trip.DestinationName || 'Unknown destination'),
-              operator: clean(trip.OperatorName, trip.TransportType || 'Bus')
-            });
-          }
+      for (var i = 0; i < trips.length; i++) {
+        var trip = trips[i];
+        var departureTime = getBestDepartureTime(trip);
+
+        if (departureTime && departureTime.getTime() > new Date().getTime() - 120000) {
+          departures.push({
+            time: departureTime,
+            line: clean(trip.LinePublicNumber, trip.LinePlanningNumber || trip.LineName || '?'),
+            destination: clean(trip.DestinationName50, trip.DestinationName || trip.Destination || 'Unknown destination'),
+            operator: clean(trip.OperatorName, trip.TransportType || trip.DataOwnerCode || 'Bus')
+          });
         }
       }
 
-      departures.sort(function (a, b) {
+     (function (a, b) {
         return a.time.getTime() - b.time.getTime();
       });
 
