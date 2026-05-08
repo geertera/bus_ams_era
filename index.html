@@ -271,7 +271,7 @@
   <script>
     var TPC_CODE = '30002018';
     // Use proxy to avoid CORS issues on GitHub Pages
-    var API_URL = 'https://corsproxy.io/?' + encodeURIComponent('https://v0.ovapi.nl/tpc/' + TPC_CODE);
+    var API_URL = 'https://corsproxy.io/?' + encodeURIComponent('http://v0.ovapi.nl/tpc/' + TPC_CODE);
 
     function twoDigits(number) {
       return number < 10 ? '0' + number : '' + number;
@@ -323,8 +323,8 @@
       var departures = [];
       var key;
 
-      if (stopData.TimingPointName) {
-        stopLabel.textContent = stopData.TimingPointName;
+      if (stopData.Stop && stopData.Stop.TimingPointName) {
+        stopLabel.textContent = stopData.Stop.TimingPointName;
       }
 
       for (key in passes) {
