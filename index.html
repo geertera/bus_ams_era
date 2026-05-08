@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bus Departures</title>
+
+  <style>
+    :root {
+      --era-pink: #ff2e63;
+      --era-orange: #ff7a1a;
+      --era-purple: #7c3cff;
+      --text: #ffffff;
+      --muted: rgba(255, 255, 255, 0.66);
+      --card: rgba(10, 10, 10, 0.76);
+      --border: rgba(255, 255, 255, 0.15);
+    }
+
+    * { box-sizing: border-box; }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      color: var(--text);
+      background: #050505;
+      font-family: Arial, Helvetica, "Liberation Sans", sans-serif;
+    }
+
+    body {
+      background:
+        linear-gradient(115deg, rgba(0, 0, 0, 0.96) 0%, rgba(0, 0, 0, 0.86) 48%, rgba(0, 0, 0, 0.58) 100%),
+        linear-gradient(135deg, #111111 0%, #050505 58%, #190815 100%);
+    }
+
+    .background-accent {
+      position: fixed;
+      right: -240px;
+      bottom: -280px;
+      width: 720px;
+      height: 720px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255, 46, 99, 0.34), rgba(124, 60, 255, 0.18) 42%, transparent 68%);
+      z-index: 0;
+    }
+
+    .brand-mark {
+      position: fixed;
+      top: 58px;
+      left: 72px;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      letter-spacing: 0.18em;
+      font-size: 16px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .brand-dot {
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      background: var(--era-pink);
+    }
+
+    .page {
+      position: relative;
+      z-index: 1;
+      height: 100vh;
+      width: 100vw;
+      padding: 72px;
+      display: grid;
+      grid-template-columns: 0.9fr 1.25fr;
+      align-items: center;
+      gap: 72px;
+    }
+
+    .hero { padding-top: 48px; }
+
+    .eyebrow {
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.24em;
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 24px;
+    }
+
+    .title {
+      margin: 0;
+      font-size: 118px;
+      line-height: 0.9;
+      letter-spacing: -0.08em;
+      font-weight: 800;
+      text-transform: uppercase;
+      max-width: 780px;
+    }
+
+    .accent-line {
+      width: 250px;
+      height: 8px;
+      margin-top: 36px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--era-pink), var(--era-orange), var(--era-purple));
+    }
+
+    .departures-card {
+      justify-self: end;
+      width: 100%;
+      min-height: 620px;
+      padding: 48px;
+      border: 1px solid var(--border);
+      border-radius: 36px;
+      background: var(--card);
+      box-shadow: 0 28px 70px rgba(0, 0, 0, 0.45);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .departures-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 7px;
+      border-radius: 36px 36px 0 0;
+      background: linear-gradient(90deg, var(--era-pink), var(--era-orange), var(--era-purple));
+    }
+
+    .card-label {
+      color: var(--muted);
+      font-size: 19px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      font-weight: 700;
+      margin-bottom: 32px;
+    }
+
+    .departure-list {
+      display: grid;
+      gap: 20px;
+    }
+
+    .departure {
+      display: grid;
+      grid-template-columns: 96px 1fr 120px;
+      gap: 22px;
+      align-items: center;
+      padding-bottom: 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .departure:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .line {
+      width: 76px;
+      min-height: 56px;
+      border-radius: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--era-pink), var(--era-orange));
+      color: #ffffff;
+    }
+
+    .destination {
+      margin: 0;
+      font-size: 32px;
+      line-height: 1.1;
+      letter-spacing: -0.035em;
+      font-weight: 800;
+    }
+
+    .operator {
+      margin-top: 7px;
+      color: var(--muted);
+      font-size: 19px;
+      line-height: 1.25;
+    }
+
+    .time {
+      text-align: right;
+      font-size: 34px;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+    }
+
+    .minutes {
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .status {
+      color: var(--muted);
+      font-size: 26px;
+      line-height: 1.3;
+      margin-top: 120px;
+    }
+
+    @media (max-width: 900px) {
+      .brand-mark { top: 36px; left: 36px; }
+
+      .page {
+        padding: 36px;
+        grid-template-columns: 1fr;
+        gap: 36px;
+        align-content: center;
+      }
+
+      .hero { padding-top: 64px; }
+      .title { font-size: 72px; }
+
+      .departures-card {
+        min-height: 480px;
+        padding: 34px;
+      }
+
+      .departure {
+        grid-template-columns: 76px 1fr 90px;
+        gap: 14px;
+      }
+
+      .line {
+        width: 62px;
+        min-height: 48px;
+        font-size: 22px;
+      }
+
+      .destination { font-size: 24px; }
+      .operator { font-size: 16px; }
+      .time { font-size: 26px; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="background-accent"></div>
+
+  <div class="brand-mark">
+    <div class="brand-dot"></div>
+    We Are Era
+  </div>
+
+  <main class="page">
+    <section class="hero" aria-label="Public transport source">
+      <div class="eyebrow">Public Transport Live</div>
+      <h1 class="title">Bus departures</h1>
+      <div class="accent-line"></div>
+    </section>
+
+    <section class="departures-card" aria-label="Bus departures">
+      <div class="card-label" id="stop-name">Halte 30002018</div>
+      <div id="departures" class="departure-list">
+        <div class="status">Loading departures...</div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    var TPC_CODE = '30002018';
+    var API_URL = 'https://v0.ovapi.nl/tpc/' + TPC_CODE;
+
+    function twoDigits(number) {
+      return number < 10 ? '0' + number : '' + number;
+    }
+
+    function formatTime(date) {
+      return twoDigits(date.getHours()) + ':' + twoDigits(date.getMinutes());
+    }
+
+    function minutesUntil(date) {
+      var diff = Math.round((date.getTime() - new Date().getTime()) / 60000);
+      if (diff <= 0) return 'now';
+      if (diff === 1) return '1 min';
+      return diff + ' min';
+    }
+
+    function parseDepartureTime(value) {
+      if (!value) return null;
+
+      // OVapi usually returns ISO-like timestamps. This also handles plain HH:mm:ss as fallback.
+      if (value.indexOf('T') > -1 || value.indexOf('-') > -1) {
+        return new Date(value);
+      }
+
+      var parts = value.split(':');
+      var date = new Date();
+      date.setHours(parseInt(parts[0], 10), parseInt(parts[1], 10), 0, 0);
+      return date;
+    }
+
+    function getBestDepartureTime(trip) {
+      return parseDepartureTime(
+        trip.ExpectedDepartureTime ||
+        trip.TargetDepartureTime ||
+        trip.ExpectedArrivalTime ||
+        trip.TargetArrivalTime
+      );
+    }
+
+    function clean(value, fallback) {
+      return value || fallback || '';
+    }
+
+    function renderDepartures(data) {
+      var container = document.getElementById('departures');
+      var stopLabel = document.getElementById('stop-name');
+      var stopData = data[TPC_CODE] || data;
+      var passes = stopData.Passes || {};
+      var departures = [];
+      var key;
+
+      if (stopData.TimingPointName) {
+        stopLabel.textContent = stopData.TimingPointName;
+      }
+
+      for (key in passes) {
+        if (passes.hasOwnProperty(key)) {
+          var trip = passes[key];
+          var departureTime = getBestDepartureTime(trip);
+
+          if (departureTime && departureTime.getTime() > new Date().getTime() - 120000) {
+            departures.push({
+              time: departureTime,
+              line: clean(trip.LinePublicNumber, trip.LinePlanningNumber),
+              destination: clean(trip.DestinationName50, trip.DestinationName || 'Unknown destination'),
+              operator: clean(trip.OperatorName, trip.TransportType || 'Bus')
+            });
+          }
+        }
+      }
+
+      departures.sort(function (a, b) {
+        return a.time.getTime() - b.time.getTime();
+      });
+
+      departures = departures.slice(0, 6);
+
+      if (!departures.length) {
+        container.innerHTML = '<div class="status">No upcoming departures found.</div>';
+        return;
+      }
+
+      var html = '';
+      for (var i = 0; i < departures.length; i++) {
+        var item = departures[i];
+        html += '<article class="departure">' +
+          '<div class="line">' + item.line + '</div>' +
+          '<div>' +
+            '<h2 class="destination">' + item.destination + '</h2>' +
+            '<div class="operator">' + item.operator + '</div>' +
+          '</div>' +
+          '<div class="time">' +
+            formatTime(item.time) +
+            '<div class="minutes">' + minutesUntil(item.time) + '</div>' +
+          '</div>' +
+        '</article>';
+      }
+
+      container.innerHTML = html;
+    }
+
+    function loadDepartures() {
+      var xhr = new XMLHttpRequest();
+      xhr.open('GET', API_URL, true);
+      xhr.onreadystatechange = function () {
+        if (xhr.readyState === 4) {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              renderDepartures(JSON.parse(xhr.responseText));
+            } catch (error) {
+              document.getElementById('departures').innerHTML = '<div class="status">Departure data could not be read.</div>';
+            }
+          } else {
+            document.getElementById('departures').innerHTML = '<div class="status">Departures are temporarily unavailable.</div>';
+          }
+        }
+      };
+      xhr.send();
+    }
+
+    loadDepartures();
+    setInterval(loadDepartures, 60000);
+
+    // Refresh the page daily for long-running signage stability.
+    setTimeout(function () {
+      window.location.reload();
+    }, 86400000);
+  </script>
+</body>
+</html>
