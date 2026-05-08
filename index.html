@@ -249,7 +249,11 @@
     }
 
     function minutesUntil(date) {
-      var diff = Math.round((date.getTime() - new Date().getTime()) / 60000);
+      // Raspberry Pi clock correction: internal clock is 2 hours behind.
+      // Departure times are already correct, so only correct the current-time calculation.
+      var CLOCK_OFFSET_MINUTES = 120;
+      var correctedNow = new Date(new Date().getTime() + CLOCK_OFFSET_MINUTES * 60000);
+      var diff = Math.round((date.getTime() - correctedNow.getTime()) / 60000);
       if (diff <= 0) return 'now';
       if (diff === 1) return '1 min';
       return diff + ' min';
