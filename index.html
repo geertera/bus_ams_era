@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <title>Bus Departures</title>
 
   <style>
@@ -141,10 +144,7 @@
       margin-bottom: 32px;
     }
 
-    .departure-list {
-      display: grid;
-      gap: 20px;
-    }
+    .departure-list { display: grid; gap: 20px; }
 
     .departure {
       display: grid;
@@ -155,10 +155,7 @@
       border-bottom: 1px solid rgba(255, 255, 255, 0.12);
     }
 
-    .departure:last-child {
-      border-bottom: 0;
-      padding-bottom: 0;
-    }
+    .departure:last-child { border-bottom: 0; padding-bottom: 0; }
 
     .line {
       width: 76px;
@@ -237,8 +234,17 @@
   <script>
     var STOP_ID = 'NL:S:30002018';
     var STOP_NAME = 'Koivistokade';
-    var DRGL_URL = 'https://drgl.nl/stop/' + encodeURIComponent(STOP_ID);
-    var API_URL = 'https://corsproxy.io/?' + encodeURIComponent(DRGL_URL);
+    var CLOCK_OFFSET_MINUTES = 120;
+    var lastSuccessfulHtml = '';
+
+    function getCorrectedNow() {
+      return new Date(new Date().getTime() + CLOCK_OFFSET_MINUTES * 60000);
+    }
+
+    function buildApiUrl() {
+      var drglUrl = 'https://drgl.nl/stop/' + encodeURIComponent(STOP_ID) + '?_=' + new Date().getTime();
+      return 'https://corsproxy.io/?' + encodeURIComponent(drglUrl);
+    }
 
     function twoDigits(number) {
       return number < 10 ? '0' + number : '' + number;
@@ -249,11 +255,7 @@
     }
 
     function minutesUntil(date) {
-      // Raspberry Pi clock correction: internal clock is 2 hours behind.
-      // Departure times are already correct, so only correct the current-time calculation.
-      var CLOCK_OFFSET_MINUTES = 120;
-      var correctedNow = new Date(new Date().getTime() + CLOCK_OFFSET_MINUTES * 60000);
-      var diff = Math.round((date.getTime() - correctedNow.getTime()) / 60000);
+      var diff = Math.round((date.getTime() - getCorrectedNow().getTime()) / 60000);
       if (diff <= 0) return 'now';
       if (diff === 1) return '1 min';
       return diff + ' min';
@@ -263,10 +265,11 @@
       var parts = String(value).trim().split(':');
       if (parts.length < 2) return null;
 
-      var date = new Date();
+      var now = getCorrectedNow();
+      var date = new Date(now.getTime());
       date.setHours(parseInt(parts[0], 10), parseInt(parts[1], 10), 0, 0);
 
-      if (date.getTime() < new Date().getTime() - 120000) {
+      if (date.getTime() < now.getTime() - 120000) {
         date.setDate(date.getDate() + 1);
       }
 
@@ -298,6 +301,7 @@
       var stopLabel = document.getElementById('stop-name');
       var text = extractTextFromResponse(responseText);
       var departures = [];
+      var now = getCorrectedNow();
 
       stopLabel.textContent = STOP_NAME;
 
@@ -311,7 +315,7 @@
         var transportType = clean(match[4]);
         var operator = clean(match[5]);
 
-        if (departureTime && departureTime.getTime() > new Date().getTime() - 120000) {
+        if (departureTime && departureTime.getTime() > now.getTime() - 30000) {
           departures.push({
             time: departureTime,
             line: line,
@@ -329,6 +333,7 @@
 
       if (!departures.length) {
         container.innerHTML = '<div class="status">No upcoming departures found.</div>';
+        lastSuccessfulHtml = container.innerHTML;
         return;
       }
 
@@ -349,20 +354,24 @@
       }
 
       container.innerHTML = html;
+      lastSuccessfulHtml = html;
     }
 
     function loadDepartures() {
       var xhr = new XMLHttpRequest();
-      xhr.open('GET', API_URL, true);
+      xhr.open('GET', buildApiUrl(), true);
+      xhr.setRequestHeader('Cache-Control', 'no-cache');
       xhr.onreadystatechange = function () {
         if (xhr.readyState === 4) {
           if (xhr.status >= 200 && xhr.status < 300) {
             try {
               renderDeparturesFromText(xhr.responseText);
             } catch (error) {
-              document.getElementById('departures').innerHTML = '<div class="status">Departure data could not be read.</div>';
+              if (!lastSuccessfulHtml) {
+                document.getElementById('departures').innerHTML = '<div class="status">Departure data could not be read.</div>';
+              }
             }
-          } else {
+          } else if (!lastSuccessfulHtml) {
             document.getElementById('departures').innerHTML = '<div class="status">Departures are temporarily unavailable.</div>';
           }
         }
@@ -371,11 +380,11 @@
     }
 
     loadDepartures();
-    setInterval(loadDepartures, 60000);
+    setInterval(loadDepartures, 30000);
 
     setTimeout(function () {
       window.location.reload();
-    }, 86400000);
+    }, 21600000);
   </script>
 </body>
 </html>
