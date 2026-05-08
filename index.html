@@ -270,7 +270,8 @@
 
   <script>
     var TPC_CODE = '30002018';
-    var API_URL = 'https://v0.ovapi.nl/tpc/' + TPC_CODE;
+    // Use proxy to avoid CORS issues on GitHub Pages
+    var API_URL = 'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://v0.ovapi.nl/tpc/' + TPC_CODE);
 
     function twoDigits(number) {
       return number < 10 ? '0' + number : '' + number;
